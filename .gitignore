@@ -1,0 +1,14 @@
+# cloned repos and assets (get them from NVIDIA, see the tutorials)
+src/
+isaac_ros_assets/
+nvblox_ref/
+
+# colcon build output
+build/
+install/
+log/
+
+# generated files
+__pycache__/
+frames*.gv
+frames*.pdf
