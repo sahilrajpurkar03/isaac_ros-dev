@@ -21,11 +21,11 @@ Then follow the tutorials on the [SPARC Lab YouTube channel](https://www.youtube
 
 **cuVSLAM: visual odometry and sparse 3D map**
 
-![cuVSLAM output](images/cuvslam.png)
+![cuVSLAM output](output/cuvslam.gif)
 
 **nvblox: 3D mesh and 2D occupancy grid**
 
-![nvblox output](images/nvblox.png)
+![nvblox output](output/nvblox.gif)
 
 ## Contents
 
