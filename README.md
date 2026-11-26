@@ -31,7 +31,6 @@ Then follow the tutorials on the [SPARC Lab YouTube channel](https://www.youtube
 
 | Path | What it is |
 |---|---|
-| `tutorial-3-instructions.txt` | step by step commands for tutorial 3 (nvblox) |
 | `launch/sim_cuvslam.launch.py` | cuVSLAM (stereo) + RViz |
 | `launch/sim_nvblox.launch.py` | cuVSLAM + nvblox + RViz |
 | `rviz/` | saved RViz layouts |
