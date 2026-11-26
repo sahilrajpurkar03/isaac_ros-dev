@@ -1,0 +1,78 @@
+## system info
+Isaac ROS 3.2 as I am using the ubuntu 22.04 and NVIDIA driver 580
+
+## Before you start: files from the description
+# use the prepared files from the description, so you do not need to install anything again and do not need to set up RViz again
+#   Dockerfile.isaac_ros     > ${ISAAC_ROS_WS}/docker/   (visual SLAM, nvblox and pygame stay installed in the container)
+#   sim_nvblox.launch.py     > ${ISAAC_ROS_WS}/launch/   (cuVSLAM + nvblox + RViz in one launch file)
+#   sim_nvblox.rviz          > ${ISAAC_ROS_WS}/rviz/     (the RViz layout, already configured; the launch file loads it)
+#   joystick_teleop.py       > ${ISAAC_ROS_WS}/          (from tutorial 2)
+
+# on your PC (not in the container): tell the dev container to use the Dockerfile, one time
+# create the file ~/.isaac_ros_common-config with these two lines (replace sparc with your user name)
+    CONFIG_IMAGE_KEY="ros2_humble.isaac_ros"
+    CONFIG_DOCKER_SEARCH_DIRS=(/home/sparc/isaac_ros-dev/docker)
+
+# the first start builds the image (about 30 minutes), after that it starts in seconds. Always use -b (the commands below do)
+
+## Step 1: robot and environment
+
+# open Isaac Sim, then open Dingo.usd
+    cd isaac-sim/
+    ./isaac-sim.sh
+
+# you can use your own robot, sensor, and environment to create that follow this tutorial series for drive control: https://www.youtube.com/playlist?list=PLCe6HvrhF6BA and sensors: https://www.youtube.com/playlist?list=PLcBTuH4qROPU
+# the env and robot which I have used in this tutorial, I will attached in the description
+
+# in this scene cuVSLAM publishes the odom > base_link transform (the simulator's own one is switched off), so the map is built from the visual pose
+
+# connect the controller, then press Play in Isaac Sim
+# the controller must be connected before the container starts, otherwise the container does not see it
+
+## Step 2: Run nvblox launch
+
+# open a new terminal and enter the container (from tutorial 1)
+    cd ${ISAAC_ROS_WS}/src/isaac_ros_common
+    ./scripts/run_dev.sh -b -d ${ISAAC_ROS_WS}
+
+# in the container: start cuVSLAM, nvblox and RViz with one launch file
+    ros2 launch /workspaces/isaac_ros-dev/launch/sim_nvblox.launch.py
+
+# expected result: RViz opens with the layout already loaded (Fixed Frame is map), no error lines in the terminal
+
+# optional check, open a new terminal and enter the same container, then check the transform tree (the pdf is saved in your workspace folder, open it on your PC)
+    cd ${ISAAC_ROS_WS}/src/isaac_ros_common
+    ./scripts/run_dev.sh -b -d ${ISAAC_ROS_WS}
+
+    cd /workspaces/isaac_ros-dev
+    ros2 run tf2_tools view_frames
+
+# expected tree in frames.pdf: every frame has one parent
+    map > odom > base_link > left_camera, right_camera
+
+## Step 3: Run joystick
+
+# open a new terminal and enter the same container
+    cd ${ISAAC_ROS_WS}/src/isaac_ros_common
+    ./scripts/run_dev.sh -b -d ${ISAAC_ROS_WS}
+
+    cd /workspaces/isaac_ros-dev
+    python3 joystick_teleop.py
+
+## Step 4: result
+
+# in RViz (layout already loaded): tick NvbloxMesh, this is the 3D map
+# the Map display is the 2D grid made from the same data (this is what Nav2 uses in the next tutorial)
+
+# drive the robot with the controller, slowly, and watch the 3D map and the 2D grid grow in RViz
+# the map stays in RViz while you drive away from it
+
+## Using your own robot or topics
+
+# if you use your own robot or topics, change only the lines marked CHANGE in sim_nvblox.launch.py
+#   1. cuVSLAM, the four remapping lines: the right-hand side of each line must be your own left/right image and camera_info topics (find the names with: ros2 topic list)
+#   2. cuVSLAM, camera_optical_frames: the frame_id of your left and right camera images (find it with: ros2 topic echo <your image topic> --once --field header.frame_id)
+#   3. cuVSLAM, base_frame and odom_frame: the names of your robot base frame and odometry frame
+#   4. nvblox, the four remapping lines: your own depth image, depth camera_info, color image and color camera_info topics
+# the lines marked TUNE depend on your robot: esdf_slice_height, esdf_slice_min_height and esdf_slice_max_height are the height band (in meters) that becomes the 2D grid, so obstacles inside this band are shown
+# cuVSLAM publishes odom > base_link in this launch file, so switch your own odom > base_link publisher off (two publishers for the same frame give errors)
