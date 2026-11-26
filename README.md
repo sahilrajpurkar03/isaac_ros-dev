@@ -27,6 +27,7 @@ Then follow the tutorial on the [SPARC Lab YouTube channel](https://www.youtube.
 
 | Path | What it is |
 |---|---|
+| `tutorial-2-instructions.txt` | step by step commands for tutorial 2 (cuVSLAM) |
 | `launch/sim_cuvslam.launch.py` | cuVSLAM (stereo) on the Isaac Sim cameras |
 | `joystick_teleop.py` | drive the robot with a joystick (`/cmd_vel`) |
 | `Dingo.usd` | Isaac Sim scene |

@@ -1,0 +1,107 @@
+## system info
+Isaac ROS 3.2 as I am using the ubuntu 22.04 and NVIDIA driver 580
+
+## Step 1: robot and environment
+
+# open Isaac Sim, then open Dingo.usd
+    cd isaac-sim/
+    ./isaac-sim.sh
+
+# you can use your own robot, sensor, and environment to create that follow this tutorial series for drive control: https://www.youtube.com/playlist?list=PLCe6HvrhF6BA and sensors: https://www.youtube.com/playlist?list=PLcBTuH4qROPU
+# the env and robot which I have used in this tutorial, I will attached in the description
+
+# press Play in Isaac Sim, then open the container (from tutorial 1)
+    cd ${ISAAC_ROS_WS}/src/isaac_ros_common
+    ./scripts/run_dev.sh -b -d ${ISAAC_ROS_WS}
+
+# distance between the two cameras
+    ros2 run tf2_ros tf2_echo left_camera right_camera
+
+# expected output (stop it with Ctrl+C): 5 cm along x, no rotation
+    Translation: [0.050, 0.000, 0.000]
+    Rotation: in RPY (degree) [0.000, -0.000, 0.000]
+
+# the transform tree (the pdf is saved in your workspace folder, open it on your PC)
+    cd /workspaces/isaac_ros-dev
+    ros2 run tf2_tools view_frames
+
+# expected tree in frames.pdf: every frame has one parent
+    map > odom > base_link > left_camera, right_camera, left_wheel_link, right_wheel_link
+
+## Step 2: Teleoperation with Remote control
+
+# on your PC (not in the container): install the test app, connect the controller, open the app and check that the sticks move
+    sudo apt install jstest-gtk
+    jstest-gtk
+
+# inside the container
+    pip3 install pygame
+
+# download joystick_teleop.py (attached in the description) and put it in your workspace folder on your PC (not in the container)
+# the container sees this folder at /workspaces/isaac_ros-dev, so you copy the file only once
+    cp ~/Downloads/joystick_teleop.py ${ISAAC_ROS_WS}/
+
+# inside the container: test the axis values (move the sticks, stop with Ctrl+C)
+    cd /workspaces/isaac_ros-dev
+    python3 joystick_teleop.py --ros-args -p print_axes:=true
+
+# expected output: the name of your controller, then a line of axis values that changes when you move the sticks
+
+# if the sticks control the wrong thing, use your own axis numbers (the defaults are 1 = left stick up/down, 3 = right stick left/right)
+#    python3 joystick_teleop.py --ros-args -p linear_axis:=1 -p angular_axis:=2
+
+# run the simulation (Play in Isaac Sim), then start the teleoperation
+    python3 joystick_teleop.py
+
+# expected result: the robot drives forward and back with the left stick and turns with the right stick, and stops when you release the sticks
+
+# stop the simulation (Stop in Isaac Sim) and keep the teleoperation running, we use it again in Step 4
+
+## Step 3: Install Visual SLAM
+
+# open a new terminal (the teleoperation keeps running in the first one) and enter the same container
+    cd ${ISAAC_ROS_WS}/src/isaac_ros_common
+    ./scripts/run_dev.sh -b -d ${ISAAC_ROS_WS}
+
+# install Visual SLAM (cuVSLAM) inside the container
+    sudo apt-get update
+    sudo apt-get install -y ros-humble-isaac-ros-visual-slam
+    ros2 pkg list | grep visual_slam
+
+# expected output
+    isaac_ros_visual_slam
+    isaac_ros_visual_slam_interfaces
+
+# note: packages installed with apt inside the container are lost when the container is deleted (it is deleted when you close the last terminal in it). If "ros2 pkg list" shows nothing, run the install commands again
+
+# download sim_cuvslam.launch.py (attached in the description) and put it in a launch folder in your workspace on your PC (not in the container)
+# the container sees it at /workspaces/isaac_ros-dev/launch/
+    mkdir -p ${ISAAC_ROS_WS}/launch
+    cp ~/Downloads/sim_cuvslam.launch.py ${ISAAC_ROS_WS}/launch/
+
+# run the launch file (in this container terminal; the simulation can still be stopped, cuVSLAM waits for the camera images)
+    ros2 launch /workspaces/isaac_ros-dev/launch/sim_cuvslam.launch.py
+
+## Step 4: result
+
+# play the simulation (Play in Isaac Sim, the robot must be at its start position, and keep the sticks released)
+
+# open RViz: open a new terminal and enter the same container
+    cd ${ISAAC_ROS_WS}/src/isaac_ros_common
+    ./scripts/run_dev.sh -b -d ${ISAAC_ROS_WS}
+    rviz2
+
+# in RViz: set Fixed Frame (top left, Global Options) to map (cuVSLAM publishes its results in the map frame, which is the top of our transform tree)
+# in RViz: Add (bottom left) > By topic, then add
+#   /visual_slam/tracking/slam_path             Path
+#   /visual_slam/vis/landmarks_cloud            PointCloud2
+#   /visual_slam/vis/observations_cloud         PointCloud2
+
+# drive the robot with the controller (the teleoperation from Step 2) and watch the path and the point clouds grow in RViz
+
+## Using your own robot or topics
+
+# if you use your own robot or topics, change only the lines marked CHANGE in sim_cuvslam.launch.py
+#   1. the four remapping lines: the right-hand side of each line must be your own left/right image and camera_info topics (find the names with: ros2 topic list)
+#   2. camera_optical_frames: the frame_id of your left and right camera images (find it with: ros2 topic echo <your image topic> --once --field header.frame_id)
+#   3. base_frame and odom_frame: the names of your robot base frame and odometry frame
